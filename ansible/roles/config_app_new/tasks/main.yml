@@ -65,3 +65,26 @@
     rm -rf {{ pathDespliegue }}
 
    # falta configuar los log de nginx al nsf_pv: 
+   # Nos conectamos al contenedor para ver que el volumen esta mapeado:   
+   
+# kubectl exec --stdin --tty webapp-volumes-xxxxxxxxxxx --namespace=webapp-volumes -- /bin/bash
+
+# El volumen que hemos mapeado se encuentra vacio, con lo cual nos conectamos al servidor de nfs y en el
+#  directorio que tenemos compartido por nfs creamos el fichero index.php con el siguiente contenido:
+ # <html>
+ # <head>
+ #  <title>Webapp (PHP powered)</title>
+ #</head>
+ # <body>
+ # <?php
+ #echo "¡Hola mundo! <br><br>";
+ # $port=$_ENV["PORT"];
+ # echo "estoy escuchando en el puerto ".$port.".<br><br>";
+ #?>
+ #</body>
+ #</html>
+
+ # Ahora ya podemos acceder desde fuera del entorno:
+ # curl -I -H 'Host: foo-volumes.bar' 'http://10.0.1.12:30432/volumes'
+
+ # ver apps publicadas: kubectl get svc -A
