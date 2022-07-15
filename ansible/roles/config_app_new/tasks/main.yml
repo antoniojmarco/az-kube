@@ -1,0 +1,67 @@
+---
+# tasks file for config_app
+# la pagina de base es: https://kubernetes.io/es/docs/tasks/run-application/run-stateless-application-deployment/
+
+# Tareas previas
+- name: 0.1 Creamos el directorio temporal para despliegue por defecto "/tmp/deployApp"
+  file:
+    path: "{{ pathDespliegue }}"
+    state: directory
+
+# Copiamos los ficheros necesarios para el despliegue:
+# nfs_pv: nfs persisten volume
+# nfs_pvc: nfs persitent volume claim
+# webappnginx: fichero donde se crean los recursos de la aplicación: 
+
+- name: 0.2 copiamos los ficheros necesarios para el despliegue
+  copy:
+    src: ../files/{{ item }}.yaml
+    dest: "{{ pathDespliegue }}"
+  with_items:
+    - nfs_pv
+    - nfs_pvc
+    
+# Se crea un namespace llamado webappnginx para desplegar el servidor web
+- name: 1. Creamos el namespace
+  shell: | 
+    kubectl create namespace webappnginx
+
+- name: 2. Definimos el persistent volume
+  shell: |
+    kubectl apply -f {{ pathDespliegue }}/nfs-pv2.yaml
+    kubectl get pv --namespace=webappnginx
+    kubectl describe pv --namespace=webappnginx
+  register: pvOut
+
+- debug: var=pvOut.stdout_lines
+
+- name: 3. Se crea el claim
+  shell: |
+    kubectl apply -f {{ pathDespliegue }}/nfs-pvc.yaml
+    kubectl get pvc --namespace=webappnginx
+    kubectl describe pvc nfs-pvc --namespace=webappnginx
+  register: pvcOut
+
+- debug: var=pvcOut.stdout_lines
+
+- name: 4. Se realiza el deployment del servidor nginx
+  shell: |
+    kubectl apply -f https://k8s.io/examples/application/deployment.yaml
+  
+  register: deploymentOut
+- debug: var=deploymentOut.stdout_lines
+    # comandos de test
+    # sudo kubectl get pods -l app=nginx
+    # sudo  kubectl describe pod <nombre del pod>
+    #kubectl describe deployment --namespace=webappnginx
+    #kubectl get pods --namespace=webappnginx -o wide
+    #kubectl get svc --namespace=webappnginx -o wide
+    #kubectl describe svc volumes-service --namespace=webappnginx
+    #kubectl get ep --namespace=webappnginx -o wide
+    #kubectl describe ep volumes-service --namespace=webappnginx
+
+- name: 5. Se borra el directorio temporal de despliegue
+  shell: |
+    rm -rf {{ pathDespliegue }}
+
+   # falta configuar los log de nginx al nsf_pv: 

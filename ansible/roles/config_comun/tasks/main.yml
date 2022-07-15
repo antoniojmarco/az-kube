@@ -1,0 +1,56 @@
+---
+# Configuraciones comunes que aplican a todos los hosts
+
+# - name: 0. Actualizacion general del sistema
+#  dnf:
+#     name: "*"
+#     state: latest
+#     notify: Reinicio
+
+- name: 1. Mapeo /etc/hosts
+  lineinfile:
+      path: /etc/hosts
+      line: "{{item.ip}} {{item.hostname}}"
+      state: present
+      create: yes
+  with_items:
+     - "{{ (hostvars[inventory_hostname]['publicIp']) }}"
+
+- name:  2. Ajustar zona horaria
+  shell: timedatectl set-timezone Europe/Madrid && timedatectl set-ntp true
+
+- name: 3. Iniciar Servicio chronyd con la correspondiente zona horaria
+  service: 
+    name: chronyd
+    enabled: yes
+    state: started
+
+- name: 4. Habilitar cortafuegos
+  service:
+    name: firewalld
+    enabled: yes
+    state: started
+
+- name: 5. Prerequisitos de RPMs necesarios
+  dnf:
+    name: '{{ item }}'
+    state: 'latest'
+  loop:
+    - nfs-utils
+    - rpcbind
+    - chrony
+    - python3
+    - nfs4-acl-tools
+    - wget
+
+- name:  6. Deshabilirar SELinux 
+  shell: setenforce 0
+  notify: Reinicio
+
+#- name: 6b. Unconditionally reboot 
+# reboot:
+
+
+
+
+

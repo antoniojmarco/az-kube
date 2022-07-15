@@ -1,0 +1,19 @@
+---
+# tasks file for configuracion_nfs_clients
+
+# 1. Intalar las nfs-utils
+- name: 1. instalar nfs-utils
+  yum: name=nfs-utils state=latest
+  
+# 2. Crear el directorio y montarlo si no existe
+- name: 2. Crear y montar directorio si no existe
+  file:
+    path: '{{ nfsPathWorkers }}'
+    state: directory
+    owner: ansible
+    group: ansible
+    mode: '0775'
+
+# 3. Montar el volumnen creado /repo
+- name: 3. Montar el volumnen creado
+  shell: sudo mount -t nfs {{ nfsIp }}:{{ nfsPath }} {{ nfsPathWorkers }}

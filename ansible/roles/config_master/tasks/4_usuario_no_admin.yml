@@ -1,0 +1,30 @@
+---
+# 20a. asigno a la variable password el valor "ansible" para evitar el warning 
+
+
+- name: 20b. Crear usuario para gestion de cluster
+  user:
+    name: kubeadmin
+    create_home: yes
+    home: /home/kubeadmin
+    password: "{{ password }}"
+
+- name: 21. Crear directorio .kube
+  command: 
+    cmd: mkdir -p /home/kubeadmin/.kube
+    warn: no
+
+- name: 22. Copiar configuracion
+  shell: cp -i /etc/kubernetes/admin.conf /home/kubeadmin/.kube/config
+
+- name: 23. Chown kubeadmin
+  command: 
+    cmd: chown kubeadmin. /home/kubeadmin/.kube/config
+    warn: no
+
+- name: 24. Agregar a sudoers
+  blockinfile:
+    create: yes
+    path: "/etc/sudoers.d/kubeadmin"
+    block: |
+           ALL          ALL = (ALL) NOPASSWD: ALL

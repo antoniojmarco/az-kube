@@ -1,0 +1,63 @@
+---
+ # Procedimiento de instalacion de un servidor NFS en una distribucion Linux
+ # basada en RPMs: Fedora, CentOS Stream, etc
+
+- name: 1. Instalar los rpms necesarios
+  yum: name=nfs-utils state=latest
+
+ # opcionalmente si no se hebilitan, son necesarios????
+- name: Habilitamos rpcbind nfs-server nfs-idmapd
+  service:
+    name: '{{ item }}'
+    enabled: yes
+  with_items:
+    - rpcbind
+    - nfs-server
+    - nfs-idmapd
+
+# 2. Directorios que seran compartidos por el servidor: mkdir -p /mnt/<DIRECTORY>
+# 3. Establecer la configuracion del propietario del directorio: chown -R nobody: /mnt/<DIRECTORY
+# 4. Modificar los permisos al directorio: chmod -R 777 /mnt/<DIRECTORY>
+- name: 2. Crear los directorios que seran compartidos por el servidor si no existe
+  file:
+    path: '{{ nfsPath }}'
+    state: directory
+    owner: ansible
+    group: ansible
+    mode: '0777'
+    
+# 5. Add al fichero /etc/exports todos los directorios que se desean compartir:
+# sudo cat <<EOF > /etc/exports
+# <DIRECTORY>  <SUBNET_CIDR>(rw,sync,no_subtree_check)  EOF
+# El fichero con el contenido se obtiene de: tasks\ansible\exports.j2
+
+- name: Copiamos el fichero exports
+  template:
+    src: ./ansible/exports.j2
+    dest: /etc/exports
+    owner: ansible
+    group: ansible
+    mode: 0644
+
+# 6. Habilitar e iniciar el servicio NFS: sudo systemctl enable nfs-server --now
+# 7. Exportar el sistema de ficheros: sudo exportfs -arv 
+# 8. Verificar que el directorio esta siendo exportado correctamente:s sudo exportfs -s
+- name: 6. 7. 8.  Habilitar e iniciar el servicio NFSy Exportar el sistema de ficheros
+  shell: |
+    systemctl enable nfs-server --now
+    sudo exportfs -arv
+    exportfs -a
+    sudo exportfs -s
+    systemctl reload nfs-server
+
+# 9. Habilitar en el cortafuegos el trafico correspondiente al servicio NFS y recergar la configuracion del FW:
+- name: 9. Habilitar en el cortafuegos el trafico correspondiente al  NFS 
+  shell: |
+    firewall-cmd --permanent --zone=public --add-service=nfs
+    firewall-cmd --permanent --zone=public --add-service=mountd
+    firewall-cmd --permanent --zone=public --add-service=rpc-bind
+
+- name: Recarga Configuracion Firewall 
+  systemd:
+    name: firewalld
+    state: reloaded

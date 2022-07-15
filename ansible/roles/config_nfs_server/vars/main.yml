@@ -1,0 +1,5 @@
+---
+# vars file for config_nfs_server
+
+
+nfsPath: '/mnt/repo'

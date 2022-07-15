@@ -1,0 +1,27 @@
+---
+#NOTA: Este paso es opcional y consiste en la instalación de Calico como SDN para un entorno de Kubernetes en local. No aplica para la solución
+#del caso práctico 2 que estará desplegada en Azure.
+
+- name: 1.Instalamos Tigera
+  shell: |
+    kubectl create -f "{{ tigeraPath }}"
+
+- name: Descargamos el fichero custom-resources.yml y lanzamos kubectl apply
+  shell: |
+    wget {{ customResourcesPath }}
+    sed -i "13s/.*/      cidr: 192.169.0.0\/16/" custom-resources.yaml
+    kubectl apply -f custom-resources.yaml
+
+
+# Crear un bucle que lo revise cada 5 segundos con un máximo de 25 intentos y, en caso de aparecer Ready, 
+# continua el flujo. Ciertamente, la segunda no es una solución definitiva 100% fiable.
+
+- name: 2. Esperar a que Master este READY
+  shell: |
+    /usr/bin/kubectl get nodes
+  register: shellOut
+  until:      
+    - '" Ready "  in shellOut.stdout'      
+  retries: 25
+  delay: 5
+

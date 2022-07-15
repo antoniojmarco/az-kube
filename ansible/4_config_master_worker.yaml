@@ -1,0 +1,16 @@
+# En este Playbook se configurará la configuración inicial común a las máquinas
+
+
+- hosts: master
+  order: sorted
+  gather_facts: yes
+  become: true
+  roles:
+  - config_master
+
+- hosts: workers
+  order: sorted
+  gather_facts: true
+  become: true
+  roles:
+  - config_workers

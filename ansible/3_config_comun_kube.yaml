@@ -1,0 +1,14 @@
+- hosts: master
+  order: sorted
+  gather_facts: yes
+  become: true
+  roles:
+  - config_comun_kube
+
+- hosts: workers
+  order: sorted
+  gather_facts: yes
+  become: true
+  roles:
+  - config_comun_kube
+

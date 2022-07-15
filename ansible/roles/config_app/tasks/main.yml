@@ -1,0 +1,101 @@
+---
+# tasks file for config_app
+# Cuando necesitemos que un pod almacene informacion que no se pierda al destruirse los contenedores 
+# que contiene utilizaremos volumenes persistentes.
+# Temp dir
+- name: 1. Creamos un directorio temporal "/tmp/deployApp"
+  file:
+    path: "{{ pathDespliegue }}"
+    state: directory
+# Copy files:
+# El fichero nfs-pv.yaml define un persistent volume:
+# Para crear el claim y poder asignarle el volumen a un POD creamos el fichero nfs-pvc.yaml:
+# Basandonos en el de la aplicacion de ejemplo creamos el fichero yaml webapp-volumes.yaml, 
+# incluyendo del deployment, service, ingress y el configmap:
+- name: 2. Obtenemos los ficheros necesarios
+  copy:
+    src: ../files/{{ item }}.yaml
+    dest: "{{ pathDespliegue }}"
+  with_items:
+    - nfs-pv
+    - nfs-pvc
+    - webapp-volumes
+
+# Substituimos la IP 0.0.0.0 definida nfs-pv por la IP Publica del master
+- name: 3. Substituimos la IP 
+  shell: |
+   sed -i "19s/.*/    server: {{ (hostvars[inventory_hostname]['publicIp'][0].ip) }}/" {{ pathDespliegue }}/nfs-pv.yaml
+
+# Borramos el namespace si existe
+- name: 4. eliminar namespace
+  shell: | 
+    kubectl delete namespaces webapp-volumes
+
+
+# Creamos un namespace
+- name: 5. Creacion del namespace
+  shell: | 
+    kubectl create namespace webapp-volumes
+
+# Definimos el persistent volume:
+- name: 6. Definimos el persistent volume
+  shell: |
+    kubectl apply -f {{ pathDespliegue }}/nfs-pv2.yaml
+    kubectl get pv --namespace=webapp-volumes
+    kubectl describe pv --namespace=webapp-volumes
+  register: pvOut
+
+- debug: var=pvOut.stdout_lines
+
+- name: 7. Creamos el claim
+  shell: |
+    kubectl apply -f {{ pathDespliegue }}/nfs-pvc.yaml
+    kubectl get pvc --namespace=webapp-volumes
+    kubectl describe pvc nfs-pvc --namespace=webapp-volumes
+  register: pvcOut
+
+- debug: var=pvcOut.stdout_lines
+
+# Hacemos el deployment:
+- name: 8. Realizamos el deployment
+  shell: |
+    kubectl apply -f {{ pathDespliegue }}/webapp-volumes.yaml
+    
+  register: deploymentOut
+
+- name: 9. Realizamos el deploiment test
+  shell: |
+    kubectl get pods --namespace=webapp-volumes -o wide
+    kubectl get svc --namespace=webapp-volumes -o wide
+    kubectl describe svc volumes-service --namespace=webapp-volumes
+    kubectl get ep --namespace=webapp-volumes -o wide
+    kubectl describe ep volumes-service --namespace=webapp-volumes
+
+- debug: var=deploymentOut.stdout_lines
+
+- name: 10. Borramos el temp
+  shell: |
+    rm -rf {{ pathDespliegue }}
+
+# Nos conectamos al contenedor para ver que el volumen esta mapeado:   
+# kubectl exec --stdin --tty webapp-volumes-xxxxxxxxxxx --namespace=webapp-volumes -- /bin/bash
+
+# El volumen que hemos mapeado se encuentra vacio, con lo cual nos conectamos al servidor de nfs y en el
+#  directorio que tenemos compartido por nfs creamos el fichero index.php con el siguiente contenido:
+ # <html>
+ # <head>
+ #  <title>Webapp (PHP powered)</title>
+ #</head>
+ # <body>
+ # <?php
+ #echo "¡Hola mundo! <br><br>";
+ # $port=$_ENV["PORT"];
+ # echo "estoy escuchando en el puerto ".$port.".<br><br>";
+ #?>
+ #</body>
+ #</html>
+
+ # Ahora ya podemos acceder desde fuera del entorno:
+ # curl -I -H 'Host: foo-volumes.bar' 'http://10.0.1.12:30432/volumes'
+
+ # ver apps publicadas: kubectl get svc -A

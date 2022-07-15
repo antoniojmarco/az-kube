@@ -1,0 +1,108 @@
+
+---
+# Configuracion especifica del nodo master
+# Guia https://github.com/ptaritepui/devops/blob/main/caso_practico/procedimiento_kubernetes.md
+
+- name: 9. Permitir en el cortafuegos el trafico necesario para el servicio
+  firewalld:
+    port: "{{item}}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - 6443/tcp
+    - 2379/tcp
+    - 2380/tcp
+    - 10250/tcp
+    - 10251/tcp
+    - 10252/tcp
+    - 10255/tcp
+    
+- name: 10. Permitir en el cortafuegos las conexiones desde cada nodo worker
+  shell: |
+    firewall-cmd --permanent --add-rich-rule 'rule family=ipv4 source address={{ (hostvars[inventory_hostname]['publicIp'][1].ip) }}/32 accept'
+    firewall-cmd --permanent --add-rich-rule 'rule family=ipv4 source address={{ (hostvars[inventory_hostname]['publicIp'][2].ip) }}/32 accept'
+    firewall-cmd --reload
+
+- name: 11. Configurar kubeadm
+  shell: |
+    kubeadm config images pull
+
+
+# REPASAR..
+
+- name: 11b. verificar kubeadm status
+  stat:
+    path: /etc/kubernetes/pki/ca.key
+  register: kubecakey
+
+# Instalamos plugin CNI de forma inidicada en la guia y guardamos el comando final
+- name: 11c. Inicializar Clusterluster
+  shell: kubeadm init --pod-network-cidr=192.169.0.0/16 
+  args:
+     chdir: $HOME
+     creates: cluster_initialized.txt
+  when: not kubecakey.stat.exists
+
+- name: Generate token
+  shell: kubeadm token create --print-join-command
+  register: k8_join_token
+
+- name: Print token
+  debug:
+     var: k8_join_token.stdout
+
+- name: Save token
+  local_action: copy content="{{ k8_join_token.stdout_lines[0] }}" dest="/tmp/k8_join_token" mode=0777
+
+
+#13. Exportar la configuracion de kubeadmin:  
+- name: 13.Exportar la configuracion de kubeadmin
+  shell: "export KUBECONFIG=/etc/kubernetes/admin.conf"
+
+
+#14 Autorizar el acceso al cluster para terminar la configuración
+- name: 14. crear directorio .kube
+  command: 
+    cmd: "mkdir -p $HOME/.kube"
+    warn: no
+
+- name: 14b. Copiar admin.conf"
+  command: "cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+
+- name: 14c. Config directory .kube
+  shell: 
+     cmd: "chown $(id -u):$(id -g) $HOME/.kube/config"
+     warn: no
+  
+
+# 15.4 Se aplican los cambios: kubectl apply -f custom-resources.yaml
+#- name: 15.4 Se aplican los cambios
+#  shell: |
+#    kubectl apply -f custom-resources.yaml
+
+# 16.1  Instalar la SDN en Azure
+- name: open ports
+  firewalld:
+    zone: public
+    permanent: yes
+    state: enabled
+    immediate: yes
+    port: "{{ item }}"
+  loop:
+    - 8285/udp
+    - 8472/udp
+
+- name: Reload firewall
+  command: firewall-cmd --reload
+
+- name: Install flannel
+  command: kubectl apply -f https://docs.projectcalico.org/manifests/canal.yaml
+
+# 16.2  Aplicamos la defincion de las politicas de red en el nodo master:
+- name: Install flannel
+  command: kubectl apply -f https://docs.projectcalico.org/manifests/canal.yaml
+
+# 16.3 Reiniciar el master
+- name: 16.3 Reiniciar el master 
+  reboot:

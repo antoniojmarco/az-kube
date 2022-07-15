@@ -1,0 +1,27 @@
+all:
+  vars:
+     ansible_python_interpreter: '/usr/bin/python3'
+     publicIp:
+        - {"name": vm-master,   "ip":20.68.180.6, "hostname":master.azure}
+        - {"name": vm-worker01, "ip":20.254.112.160, "hostname":worker01.azure}
+        - {"name": vm-worker02, "ip":20.58.52.170,   "hostname":worker02.azure}
+        - {"name": vm-nfs,      "ip":20.77.73.176,   "hostname":nfs.azure}
+  children:
+    master:
+      hosts:
+        vm-master:
+          ansible_host: '{{publicIp[0].ip}}'
+          ansible_user: ansible
+    workers:
+      hosts:
+        vm-worker01:
+          ansible_host: '{{publicIp[1].ip}}'
+          ansible_user: ansible
+        vm-worker02:
+          ansible_host: '{{publicIp[2].ip}}'
+          ansible_user: ansible       
+    nfs:
+      hosts:
+        vm-nfs:
+          ansible_host: '{{publicIp[3].ip}}'
+          ansible_user: ansible

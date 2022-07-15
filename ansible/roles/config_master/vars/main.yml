@@ -1,0 +1,7 @@
+---
+# vars file for configuracion_kubMaster
+tigeraPath: https://docs.projectcalico.org/manifests/tigera-operator.yaml
+customResourcesPath: https://docs.projectcalico.org/manifests/custom-resources.yaml
+canalPath: https://docs.projectcalico.org/manifests/canal.yaml
+ingressControllerPath:  https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/deploy/haproxy-ingress.yaml
+password: ansible

@@ -1,0 +1,13 @@
+# En este Playbook se configurará la configuración inicial común a las máquinas
+
+- hosts: nfs
+  order: sorted
+  become: yes
+  roles:
+    - config_nfs_server
+
+- hosts: workers
+  order: sorted
+  become: yes
+  roles:
+    - config_nfs_clients

@@ -1,0 +1,31 @@
+---
+# tasks file for config Workers
+
+- name: 18. Habilitar el tráfico entrante en el cortafuegos
+  shell: |
+    firewall-cmd --zone=public --permanent --add-port={10250,30000-32767}/tcp
+    firewall-cmd --permanent --add-port=8285/udp
+    firewall-cmd --permanent --add-port=8472/udp
+    firewall-cmd --reload
+
+# intentar automatizar
+#name: 19. Añadir el worker al cluster de Kubernetes
+#  shell: |
+# kubeadm join 192.168.1.110:6443 --token gmk4le.8gsfpknu99k78qut --discovery-token-ca-cert-hash sha256:d2cd35c9ab95f4061aa9d9b993f7e8742b2307516a3632b27ea10b64baf8cd71
+
+
+
+
+#Añadir el worker al cluster de Kubernetes: aqui se peresenta un error se está anadiendo los caracyteres de  " \\\n\t " despues del parametro --token
+# kubeadm join 10.0.1.11:6443 --token 61am9g.mwfall01ai9ljazd  \\\n\t  --discovery-token-ca-cert-hash sha256:3018fd506beb41ce861feca3f04c325d90d0b823a9ef3b2aeeb0ffabaff5ebd7
+
+- name: Recuperamos el fichero con el comando join
+  copy: src=./kubeadmJoin dest=./kubeadmJoin  
+
+- name: Obtenemos el comando y lo guardamos en la variable kubeJoinLaunch
+  shell: cat ./kubeadmJoin 
+  register: kubeJoinLaunch
+
+- name: Ejecutamos el join
+  shell: "{{kubeJoinLaunch.stdout}}" 
+

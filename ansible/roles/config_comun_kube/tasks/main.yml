@@ -1,0 +1,105 @@
+---
+# Configuraciones comunes que aplican a todos los hosts de Kubernetes
+
+# Los siguientes comandos son añadidos para probar si funciona calico en Azure
+#    firewall-cmd --permanent --add-port=8285/udp
+#    firewall-cmd --permanent --add-port=8472/udp
+
+# Kubernetes prerequisitos
+
+# Habilitar transparent masquerading inicio
+- name: 1. Activamos transparent masquerading permite que los PODs puedan comunicarse dentro del cluster mediante VXLAN
+  shell: |
+    modprobe br_netfilter
+    firewall-cmd --add-masquerade --permanent
+    firewall-cmd --permanent --add-port=8285/udp
+    firewall-cmd --permanent --add-port=8472/udp
+    firewall-cmd --reload
+
+- name: Permitir que kubernetes maneje correctamente el tráfico con el cortafuegos
+  lineinfile:
+      path: /etc/sysctl.d/k8s.conf
+      line: "{{item}}"
+      state: present
+      backup: yes
+      create: yes
+  with_items:
+     - 'net.bridge.bridge-nf-call-ip6tables = 1'
+     - 'net.bridge.bridge-nf-call-iptables = 1'
+     - 'net.ipv4.ip_forward = 1'
+    
+- name: sysctl --system
+  shell: |
+    sysctl --system
+# Habilitar transparent masquerading fin
+
+- name: 2. Deshabilitamos Swap en todos los nodos
+  shell: swapoff -a
+
+- name: Desactivar la partición de swap Comentando las entradas de Swap en /etc/fstab
+  replace:
+    path: /etc/fstab
+    regexp: '(^/.*swap*)'
+    replace: '# \1'
+
+# Como me fallaba la instalacion con dnf utilizo shell
+- name: 3. prerequisitos Instalación de CRI-O
+  shell: |
+    VERSION=1.24
+    OS=CentOS_8_Stream
+    curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_8_Stream/devel:kubic:libcontainers:stable.repo
+    curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo  https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.24/CentOS_8_Stream/devel:kubic:libcontainers:stable:cri-o:1.24.repo
+   
+# Intalacion CRI-O
+- name: 3.1. Instalación de CRI-O como runtime en CentOS Stream 8
+  dnf:
+      name: ['cri-o']
+      state: present
+
+- name: 4. Habilitar los módulos de kernel necesarios
+  lineinfile:
+      path: /etc/modules-load.d/crio.conf
+      line: "{{item}}"
+      state: present
+      backup: yes
+      create: yes
+  with_items:
+     - "overlay"
+     - "br_netfilter"
+    
+- name: 5. Habilitar e iniciar el servicio de cri-o
+  shell: |
+     systemctl enable crio --now
+    
+- name: 6. Habilitar el repositorio de Kubernetes
+  shell: |
+    systemctl enable crio --now
+    bash -c 'cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+    [kubernetes]
+    name=Kubernetes
+    baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+    enabled=1
+    gpgcheck=1
+    gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+    exclude=kubelet kubeadm kubectl
+    EOF'
+
+
+# Intalacion Kubernetes
+- name: 7. Instalar Kubernetes
+  shell: |
+     dnf -y install kubelet kubeadm kubectl --disableexcludes=kubernetes
+      
+
+- name: 8. Habilitamos el servicio kubelet
+  service:
+    name: 'kubelet'
+    enabled: yes
+
+- name: 8. Arrancamos kubelet
+  service:
+    name: 'kubelet'
+    state: started  
+
+
+    

@@ -1,0 +1,7 @@
+# En este Playbook se configurará la configuración inicial común a las máquinas
+
+- hosts: all
+  order: sorted
+  become: yes
+  roles:
+    - config_comun

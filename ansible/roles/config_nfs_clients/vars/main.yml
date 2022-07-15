@@ -1,0 +1,5 @@
+---
+# vars file for config_nfs_clients
+nfsPath: '/mnt/repo'
+nfsPathWorkers: '/mnt/repo'
+nfsIp: '10.0.1.12'

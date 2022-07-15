@@ -1,0 +1,3 @@
+---
+# vars file for roles/config_app
+pathDespliegue: '/tmp/deployApp'

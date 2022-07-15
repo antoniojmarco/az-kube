@@ -1,0 +1,9 @@
+---
+# tasks file for config_kubernetes Master
+
+# all
+- include_tasks: 1_kubernetes_master.yml
+# Comentar si se despliega en Azure, No aplica para la solución del caso práctico 2 que estará desplegada en Azure.
+#- include_tasks: 2_config_calico.yml
+- include_tasks: 3_config_ingress_ctrl.yml
+- include_tasks: 4_usuario_no_admin.yml

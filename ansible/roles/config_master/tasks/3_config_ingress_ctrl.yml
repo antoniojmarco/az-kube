@@ -1,0 +1,18 @@
+---
+# 17. Instalacion del Ingress Controller (HAProxy)
+
+- name: 17b. Instalacion del Ingress Controller (HAProxy)
+  command: kubectl apply -f https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/v1.5/deploy/haproxy-ingress.yaml
+ 
+# alternativa
+# kubectl apply -f https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/deploy/haproxy-ingress.yaml
+
+
+# Opcionalmente al punto 17. Solo es un test
+
+- name: 18. Vemos el namespace creado para el Ingress Controller
+  shell: |
+    kubectl get namespaces
+    kubectl get pods --namespace=haproxy-controller
+    kubectl get svc -A
+    kubectl get nodes
