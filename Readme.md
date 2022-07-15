@@ -1,39 +1,40 @@
-# PREREQUISITOS
-# Preparamos nuestro entorno para la configuración con Azure
-# Login Azure: 
+ PREREQUISITOS
+ Preparamos nuestro entorno para la configuración con Azure
+ Login Azure: 
 ```
 az login
 ```
 
-# Configuramos nuestro subscription ID
+ Configuramos nuestro subscription ID
 ```
 az account set --subscription={{ SUBSCRIPTION_ID }}
 ```
 
-# Podemos localzarlo en la página "[Suscripciones](https://portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade)
+ Podemos localzarlo en la página "[Suscripciones](https://portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade)
 
-# Comandos CLI útiles durante el proceso
+ Comandos CLI útiles durante el proceso
 
-# Listar cuentas
+ Listar cuentas
 
 `az account list`
 
-# Listar el SP
+ Listar el SP
 
 `az ad sp list --display-name {{ NOMBRE_SERVICIO }}`
 
-# Aceptar términos máquina (necesario una vez sepamos que tipos de máquinas vamos a utilizar). El siguiente comando es un ejemplo según la utilizada en la práctica.
+ Aceptar términos máquina (necesario una vez sepamos que tipos de máquinas vamos a utilizar). El siguiente comando es un ejemplo según la utilizada en la práctica.
 
 `az vm image accept-terms --urn cognosys:centos-8-stream-free:centos-8-stream-free:1.2019.0810`
 
-# Generacion deelas claves ssh
-# Generamos las claves pública/privada para poder conectar desde el PC a las máquinas generadas. 
+ Generacion deelas claves ssh
+ Generamos las claves pública/privada para poder conectar desde el PC a las máquinas generadas. 
 
 `ssh-keygen -t rsa`
 
-# TERRAFORM (stage2) :  Toda la configuración de terraform se encuenta en el directorio terraform-az.
-#
-# Procedimiento automatizado para el despliegue de la infraestructura en azure:
+# TERRAFORM (stage2) 
+Toda la configuración de terraform se encuenta en el directorio terraform-az.
+
+Procedimiento automatizado para el despliegue de la infraestructura en azure:
 
 `1_deploy_terraform.sh`
 
@@ -42,20 +43,21 @@ az account set --subscription={{ SUBSCRIPTION_ID }}
 ```
 terraform init
 ```
-### - Aplicar cambios y desplegar
+- Aplicar cambios y desplegar
 ```
 terraform apply
 ``` 
 
 
-# ANSIBLE (stage3) : La configuración de ansible se encuenta en el directorio ansible-kube.
-#
-# Procedimiento:
-# Necesitamos obtener las IPs públicas de las máquinas que hemos creado para incluirlas en el fichero "hosts.yaml". 
+# ANSIBLE (stage3)
+ La configuración de ansible se encuenta en el directorio ansible-kube.
+
+ Procedimiento:
+ Necesitamos obtener las IPs públicas de las máquinas que hemos creado para incluirlas en el fichero "hosts.yaml". 
 
 `az vm list-ip-addresses`
 
-# En el resultado obtendremos una lista de objetos con la siguiente estructura:
+ En el resultado obtendremos una lista de objetos con la siguiente estructura:
 
 ```
  {
@@ -80,8 +82,8 @@ terraform apply
   }
 ```
 
-# sustituir el fichero \az-kube\ansible\hosts con las direciones publicas obtenidas tras aprovisionar la infra
-# "ipAddress": "x.x.x.x",   Esta es el valor de la  IP que necesitamos:
+ sustituir el fichero \az-kube\ansible\hosts con las direciones publicas obtenidas tras aprovisionar la infra
+ "ipAddress": "x.x.x.x",   Esta es el valor de la  IP que necesitamos:
 
 ```
 all:
@@ -95,47 +97,45 @@ all:
   children:
 ```
 
-# Procedimiento automatizado para la configuracion del cluster en las maquinas desplegadas:
+ Procedimiento automatizado para la configuracion del cluster en las maquinas desplegadas:
 
 `2_deploy_ansible.sh`
 
-# Tnabien se puede realizar la configuración de Ansible paso a paso de las siguienete forma:
+ Tnabien se puede realizar la configuración de Ansible paso a paso de las siguienete forma:
 
-# 1. Aplicamos la configuración común del S.O para todas las máquinas
+ 1. Aplicamos la configuración común del S.O para todas las máquinas
 `ansible-playbook -i hosts.yaml 1_config_comun.yaml -K `
 
-### - Configuracion Kubernetes cluster
+ - Configuracion Kubernetes cluster
 
-# 2. Configuracion kube del NFS cliente y servidor
+ 2. Configuracion kube del NFS cliente y servidor
 `ansible-playbook -i hosts.yaml 2_config_nfs.yaml -K -v`
 
-# 3. Configuracion comun kube 
+ 3. Configuracion comun kube 
 `ansible-playbook -i hosts.yaml 3_config_comun_kube.yaml -K -v`
 
-# 4. Configuracion del master, los workers y la viculacion entre ellos
+ 4. Configuracion del master, los workers y la viculacion entre ellos
 `ansible-playbook -i hosts.yaml 4_config_master_worker.yaml -K -v`
 
-# 4b. verificar que la union de los nodos al cluster se ha realizado correctamente si no es así realizarla manualmente
-### en el nodo Master obtenemos la info necesaria: ###
+ 4b. verificar que la union de los nodos al cluster se ha realizado correctamente si no es así realizarla manualmente
+ en el nodo Master obtenemos la info necesaria: ###
 ` sudo kubeadm token list`
 ` sudo kubeadm token create --print-join-command`
 ` sudo kubectl cluster-info`
-### en los nodos Workers aplicamos el siguinete comando de join: ###
+ en los nodos Workers aplicamos el siguinete comando de join: ###
 ` sudo kubeadm join \`
 `  10.0.1.11:6443 \`
 `  --token x8reni.unrhqnlxqudy7inj \`
 ` --discovery-token-ca-cert-hash sha256:e58c5f308541c6dea877b4656a1a42b5a1c309c2e7177938b7e953f3eb7371f5`
 
-# 5. Despliegue de la aplicación en el cluster
+ 5. Despliegue de la aplicación en el cluster
 `ansible-playbook -i hosts.yaml 5_config_app.yaml -K -v`
 
+ detalles de la configuracion necesaria para la instalacion manual paso a paso:
 
-### detalles de la configuracion necesaria para la instalacion manual paso a paso:
+Instalando Kubernetes
 
-
-# Instalando Kubernetes
-
-## Creación de las máquinas virtuales
+ Creación de las máquinas virtuales
 
 Crear las siguientes máquinas virtuales con una interface de red sobre la misma red todas ellas.
 
@@ -193,7 +193,7 @@ Una vez arrancadas las máquinas, nos aseguramos que estan actualizadas a últim
 ## CONFIGURACION MANUAL
 
 
-## Tareas previas de configuración
+ Tareas previas de configuración
 
 Estas tareas se tendrán que realizar en todas las VMs del laboratorio:
 
