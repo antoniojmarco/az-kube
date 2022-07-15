@@ -38,8 +38,8 @@ Procedimiento automatizado para el despliegue de la infraestructura en azure:
 
 `1_deploy_terraform.sh`
 
-# Este sh realiza las siguinetes acciones 
-# Inicializar configuración:
+ Este sh realiza las siguinetes acciones 
+ Inicializar configuración:
 ```
 terraform init
 ```
