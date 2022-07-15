@@ -38,7 +38,7 @@
 
 # Instalamos plugin CNI de forma inidicada en la guia y guardamos el comando final
 - name: 11c. Inicializar Clusterluster
-  shell: kubeadm init --pod-network-cidr=192.169.0.0/16 
+  shell: kubeadm init --pod-network-cidr=10.0.2.0/24 
   args:
      chdir: $HOME
      creates: cluster_initialized.txt
